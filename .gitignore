@@ -1,0 +1,7 @@
+env/
+__pycache__/
+.env
+
+project_steps.md
+
+config.py
