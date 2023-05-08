@@ -1,5 +1,5 @@
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from models import Team, Player, Matchday, Match, Split
 from models import db
 from sqlalchemy import text
@@ -10,6 +10,17 @@ import datetime
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
 }
+
+
+def filter_player_div(tag):
+    if not tag.has_attr('class'):
+        return False
+    if 'el-item' not in tag['class'] or 'uk-panel' not in tag['class']:
+        return False
+    if not tag.find('div', class_='el-content uk-panel uk-text-large'):
+        return False
+    return True
+
 
 
 class DatabaseManager:
@@ -116,6 +127,7 @@ class DatabaseManager:
         return current_split, splits_data
 
 
+
     def player_data_scrap(self) -> list:
         endpoint_team_names = {
             "1K FC": "1k",
@@ -134,42 +146,48 @@ class DatabaseManager:
         
         players_data = []
         
-        print(endpoint_team_names.items())
-        
         for index, (endpoint) in enumerate(endpoint_team_names.values()):
             team_id = index + 1
             url = f"https://kingsleague.pro/team/{endpoint}"
             response = requests.get(url, headers=HEADERS)
-            print(response)
             soup = BeautifulSoup(response.text, 'html.parser')
-            
-            for player_div in soup.find_all('div', class_='el-item uk-panel uk-margin-remove-first-child'):
-                position = player_div.find('div', class_='el-content uk-panel uk-text-large').get_text(strip=True)
-                player_name = player_div.find_next('h1', class_='uk-heading-large').get_text(strip=True)
-                player_stats = player_div.find_next('div', class_='uk-grid uk-grid-small uk-child-width-1-2')
 
+
+
+            for player_div in soup.find_all(filter_player_div):
+                position = player_div.find('span').get_text(strip=True)
+                if position == "presidentepresidente":
+                    position = position.replace("presidente", "", 1)
+                elif position == "entrenadorentrenador":
+                    position = position.replace("entrenador", "", 1)
+                print("Position: ", position)
+                player_name = player_div.find('h3').get_text(strip=True)
+                print("Player name: ", player_name)
                 player_data = {
                     'team_id': team_id,
                     'name': player_name,
                     'position': position,
                 }
-                for stat in player_stats.find_all("div", class_="uk-margin"):
-                    stat_name = stat.find('div', class_='el-meta').get_text(strip=True)
-                    stat_value = stat.find('h3', class_='el-title').get_text(strip=True) if stat.find('h3', class_='el-title') else None
-                    stat_key = stat_name.lower().replace('.', '').replace(' ', '_')
-                    player_data[stat_key] = int(stat_value) if stat_value else None
+                
+                player_stats_container = player_div.find('div', class_='league-player')
+                if player_stats_container is not None:
+                    for stat in player_stats_container.find_all("div", class_="uk-margin"):
+                        stat_name = stat.find('div', class_='el-meta').get_text(strip=True)
+                        stat_value = stat.find('h3', class_='el-title').get_text(strip=True) if stat.find('h3', class_='el-title') else None
+                        stat_key = stat_name.lower().replace('.', '').replace(' ', '_')
+                        player_data[stat_key] = int(stat_value) if stat_value else None
                 
                 # establezco estadisticas que no existen en ciertos roles en None
                 if position not in ["Presidente", "Entrenador"]:
                     for stat_key in ['velocidad', 'fisico', 'tiro', 'pase', 'talento', 'defensa', 'reflejo', 'paradas', 'saque', 'estirada']:
                         if stat_key not in player_data:
                             player_data[stat_key] = None
-                            
+
                 if position == "Portero":
                     for stat_key in ['reflejo', 'paradas', 'saque', 'estirada']:
                         if stat_key not in player_data:
                             player_data[stat_key] = None
-                            
+
                 else:
                     player_data['reflejo'] = None
                     player_data['paradas'] = None
@@ -177,7 +195,7 @@ class DatabaseManager:
                     player_data['estirada'] = None
 
                 players_data.append(player_data)
-        
+
         return players_data
     
     
