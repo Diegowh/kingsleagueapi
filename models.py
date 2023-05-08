@@ -1,54 +1,55 @@
-from app import db
+from flask_sqlalchemy import SQLAlchemy
+
+
+db = SQLAlchemy()
 
 class Team(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    team_name = db.Column(db.String, nullable=False)
+    split_id = db.Column(db.Integer, db.ForeignKey('split.id'), nullable=False)
+    name = db.Column(db.String, nullable=False)
     
-    presidente = db.Column(db.String, nullable=False)
-    entrenador = db.Column(db.String, nullable=True)
-    jugador_11 = db.Column(db.String, nullable=True)
-    jugador_12_nombre = db.Column(db.String, nullable=True)
-    jugador_12_posicion = db.Column(db.String, nullable=True)
-    jugador_13_nombre = db.Column(db.String, nullable=True)
-    jugador_13_posicion = db.Column(db.String, nullable=True)
-    jugadores = db.relationship('Player', backref='team', lazy=True)
+    players = db.relationship('Player', backref='team', lazy=True)
     
-    puntos = db.Column(db.Integer, default=0)
-    victorias = db.Column(db.Integer, default=0)
-    victorias_penaltis = db.Column(db.Integer, default=0)
-    derrotas_penaltis = db.Column(db.Integer, default=0)
-    derrotas = db.Column(db.Integer, default=0)
-    goles_favor = db.Column(db.Integer, default=0)
-    goles_contra = db.Column(db.Integer, default=0)
-    diferencia_goles = db.Column(db.Integer, default=0)
+    points = db.Column(db.Integer, default=0)
+    position = db.Column(db.Integer, nullable=False)
+    victories = db.Column(db.Integer, default=0)
+    penalty_victories = db.Column(db.Integer, default=0)
+    penalty_defeats = db.Column(db.Integer, default=0)
+    defeats = db.Column(db.Integer, default=0)
+    goals_scored = db.Column(db.Integer, default=0)
+    goals_conceded = db.Column(db.Integer, default=0)
+    goals_difference = db.Column(db.Integer, default=0)
     
     def __repr__(self):
-        return f"Team(id={self.id}, team_name={self.team_name}, presidente={self.presidente}, entrenador={self.entrenador}, jugador_11={self.jugador_11}, jugador_12_nombre={self.jugador_12_nombre}, jugador_12_posicion={self.jugador_12_posicion}, jugador_13_nombre={self.jugador_13_nombre}, jugador_13_posicion={self.jugador_13_posicion}, puntos={self.puntos}, victorias={self.victorias}, victorias_penaltis={self.victorias_penaltis}, derrotas_penaltis={self.derrotas_penaltis}, derrotas={self.derrotas}, goles_favor={self.goles_favor}, goles_contra={self.goles_contra}, diferencia_goles={self.diferencia_goles})"
+        return f"Team(id={self.id}, name={self.name}, points={self.points}, victories={self.victories}, penalty_victories={self.penalty_victories}, penalty_defeats={self.penalty_defeats}, defeats={self.defeats}, goals_scored={self.goals_scored}, goals_conceded={self.goals_conceded}, goals_difference={self.goals_difference})"
 
 
 class Player(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
-    player_name = db.Column(db.String, nullable=False)
-    posicion = db.Column(db.String, nullable=False)
-    partidos = db.Column(db.Integer, nullable=False, default=0)
-    goles_encajados = db.Column(db.Integer, nullable=True, default=0)
-    penaltis_parados = db.Column(db.Integer, nullable=True, default=0)
-    t_amarilla = db.Column(db.Integer, nullable=False, default=0)
-    t_roja = db.Column(db.Integer, nullable=False, default=0)
-    mvp = db.Column(db.Integer, nullable=False, default=0)
-    goles = db.Column(db.Integer, nullable=False, default=0)
-    asist = db.Column(db.Integer, nullable=False, default=0)
-    reflejo = db.Column(db.Integer, nullable=True, default=0)
-    paradas = db.Column(db.Integer, nullable=True, default=0)
-    saque = db.Column(db.Integer, nullable=True, default=0)
-    estirada = db.Column(db.Integer, nullable=True, default=0)
-    velocidad = db.Column(db.Integer, nullable=False, default=0)
-    fisico = db.Column(db.Integer, nullable=False, default=0)
-    tiro = db.Column(db.Integer, nullable=False, default=0)
-    pase = db.Column(db.Integer, nullable=False, default=0)
-    talento = db.Column(db.Integer, nullable=False, default=0)
-    defensa = db.Column(db.Integer, nullable=False, default=0)
+    split_id = db.Column(db.Integer, db.ForeignKey('split.id'), nullable=False)
+    name = db.Column(db.String, nullable=False)
+    role = db.Column(db.String, nullable=True)
+    position = db.Column(db.String, nullable=True)
+    
+    matches = db.Column(db.Integer, nullable=True, default=0)
+    goals_conceded = db.Column(db.Integer, nullable=True, default=0)
+    penalties_saved = db.Column(db.Integer, nullable=True, default=0)
+    yellow_cards = db.Column(db.Integer, nullable=True, default=0)
+    red_cards = db.Column(db.Integer, nullable=True, default=0)
+    mvp = db.Column(db.Integer, nullable=True, default=0)
+    goals = db.Column(db.Integer, nullable=True, default=0)
+    assists = db.Column(db.Integer, nullable=True, default=0)
+    reflex = db.Column(db.Integer, nullable=True, default=0)
+    saves = db.Column(db.Integer, nullable=True, default=0)
+    kickoff = db.Column(db.Integer, nullable=True, default=0)
+    stretch = db.Column(db.Integer, nullable=True, default=0)
+    speed = db.Column(db.Integer, nullable=True, default=0)
+    physicality = db.Column(db.Integer, nullable=True, default=0)
+    shot = db.Column(db.Integer, nullable=True, default=0)
+    passing = db.Column(db.Integer, nullable=True, default=0)
+    talent = db.Column(db.Integer, nullable=True, default=0)
+    defense = db.Column(db.Integer, nullable=True, default=0)
 
 
 class Matchday(db.Model):
@@ -67,3 +68,11 @@ class Match(db.Model):
 
     home_team = db.relationship('Team', foreign_keys=[home_team_id])
     away_team = db.relationship('Team', foreign_keys=[away_team_id])
+    
+    
+class Split(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    start_date = db.Column(db.Date, nullable=False)
+    
+    teams = db.relationship('Team', backref='split', lazy=True)
+    players = db.relationship('Player', backref='split', lazy=True)

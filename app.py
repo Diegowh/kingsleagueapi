@@ -1,20 +1,33 @@
 from dotenv import load_dotenv
 from flask import Flask, render_template
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import os
+from models import db
 
 import config
 
+from database_manager import DatabaseManager
+
 load_dotenv()
-app = Flask(__name__)
-app.config.from_object(config)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Desactiva una funcion de Flask-SQLAlchemy que rastrea modificaciones en los objetos del modelo (Mejor rendimiento)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(config)
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Desactiva una funcion de Flask-SQLAlchemy que rastrea modificaciones en los objetos del modelo (Mejor rendimiento)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 
+    db.init_app(app)
+    migrate = Migrate(app, db)
+    
+    with app.app_context():
+        db.create_all()
+        
+        database_manager = DatabaseManager()
+        database_manager.update()
+    
+    return app
+
+app = create_app()
 
 @app.route('/')
 def helloworld():
