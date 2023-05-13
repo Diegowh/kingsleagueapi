@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 from flask_migrate import Migrate
 import os
 from models import db
@@ -29,9 +29,15 @@ def create_app():
 
 app = create_app()
 
-@app.route('/')
-def helloworld():
-    return 'Hello, world!'
+prueba = {
+    "cosa": 15,
+    "otra_cosa": "mas cositas",
+    "Viento": "Muchisimo"
+}
+
+@app.route('/api/leaderboard')
+def leaderboard():
+    return jsonify(prueba)
 
 
 if __name__ == '__main__':

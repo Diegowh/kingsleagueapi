@@ -25,10 +25,10 @@ def filter_player_div(tag):
 
 class DatabaseManager:
     def __init__(self) -> None:
-        self.players_data = self.player_data_scrap()
-        self.matches_data = self.match_data_scrap()
         self.matchdays_data = self.matchday_data_scrap()
+        self.matches_data = self.match_data_scrap()
         self.current_split, self.splits_data = self.split_data_scrap()
+        self.players_data = self.player_data_scrap()
         self.teams_data = self.team_data_scrap()
     
     
@@ -45,10 +45,10 @@ class DatabaseManager:
     
     
     def delete_previous_data(self):
-        Team.query.delete()
-        Player.query.delete()
-        Matchday.query.delete()
         Match.query.delete()
+        Player.query.delete()
+        Team.query.delete()
+        Matchday.query.delete()
         Split.query.delete()
     
     
@@ -77,11 +77,11 @@ class DatabaseManager:
     
     
     def update_all_tables(self):
-        self.update_team_table()
+        self.update_split_table()
         self.update_matchday_table()
         self.update_match_table()
+        self.update_team_table()
         self.update_player_table()
-        self.update_split_table()
     
     
     def reset_team_id_sequence(self):
@@ -124,6 +124,7 @@ class DatabaseManager:
             if "selected" in split_option.attrs:
                 current_split = split_id
     
+
         return current_split, splits_data
 
 
@@ -146,56 +147,98 @@ class DatabaseManager:
         
         players_data = []
         
-        for index, (endpoint) in enumerate(endpoint_team_names.values()):
-            team_id = index + 1
-            url = f"https://kingsleague.pro/team/{endpoint}"
+        for key, value in endpoint_team_names.items():
+            # itero por cada equipo
+            url = f"https://kingsleague.pro/team/{value}"
             response = requests.get(url, headers=HEADERS)
             soup = BeautifulSoup(response.text, 'html.parser')
 
 
+            team_lenght = len(soup.find_all("h3", class_="el-title uk-heading-medium uk-font-secondary uk-text-secondary uk-margin-remove-top uk-margin-remove-bottom"))
+            
+            # print(f"Equipo: {index}")
+            
+            for player_i in range(team_lenght):
+                # itero por cada jugador de cada equipo
+                player_data = {
+                    "team_name": key,
+                    "split_id": self.current_split,
+                    "name": None,
+                    "role": None,
+                    "position": None,
+                }
+                # extraigo los datos del presidente de otro sitio porque la pagina web la ha hecho un orangutan
+                if player_i == 0:
+                    player_data["name"] = soup.find_all("h3", class_="el-title uk-heading-medium uk-font-secondary uk-text-secondary uk-margin-remove-top uk-margin-remove-bottom")[player_i]
+                    player_data["role"] = "president"
+                    player_data["position"] = "president"
+                    
+                elif player_i == 1:
+                    player_data["position"] = "player_11"
+                    player_data["name"] = soup.find_all("h1", class_="uk-heading-large uk-font-secondary uk-text-secondary uk-margin-large uk-margin-remove-top uk-text-center")[player_i]
+                    player_data["role"] = soup.find_all("div", class_="uk-panel uk-text-large uk-text-secondary uk-text-bold uk-text-uppercase uk-margin")
+                    
+                elif player_i == team_lenght - 1:
+                    player_data["position"] = "coach"
+                    player_data["role"] = "coach"
+                    player_data["name"] = soup.find_all("h1", class_="uk-heading-large uk-font-secondary uk-text-secondary uk-margin-large uk-margin-remove-top uk-text-center")[0]
 
-            for player_div in soup.find_all(filter_player_div):
+            
+            # print(f"Player divs: {len(soup.find_all(filter_player_div))}")
+            # print(f'Stats container: {len(soup.find_all("div", class_="container-stats"))}')
+            
+            all_player_divs = soup.find_all(filter_player_div)
+            all_stats_container = soup.find_all("div", class_="container-stats")
+            
+            for player_div, stats_container in zip(all_player_divs, all_stats_container):
                 position = player_div.find('span').get_text(strip=True)
                 if position == "presidentepresidente":
                     position = position.replace("presidente", "", 1)
                 elif position == "entrenadorentrenador":
                     position = position.replace("entrenador", "", 1)
-                print("Position: ", position)
+                    
                 player_name = player_div.find('h3').get_text(strip=True)
-                print("Player name: ", player_name)
+                player_role = player_div.find("div", class_= "el-content uk-panel uk-text-large")
+                
+                if hasattr(player_role.contents[0], 'text'):
+                    role = player_role.contents[0].text.split('<')[0].strip()
+                else:
+                    role = player_role.contents[0].strip()[0]
+                    
+                
+                # checkeo si role esta duplicado
+                if len(role) == 21:
+                    role = role.split(" ")[0]
+                
+                # if stats_container.find("div", class_="uk-panel uk-text-large uk-text-secondary uk-text-bold uk-text-uppercase player-position uk-margin") == "Portero":
+                # print(stats_container.find("div", class_="uk-panel uk-text-large uk-text-secondary uk-text-bold uk-margin"))
+                
+                stats_divs = stats_container.find_all('div', class_='el-item uk-panel uk-margin-remove-first-child')
+                # print(stats_divs[0])
+                player_stats = {}
                 player_data = {
-                    'team_id': team_id,
+                    'team_name': key,
                     'name': player_name,
                     'position': position,
+                    'role': role,
                 }
+                # if role.lower() == "portero":
+                #     for stat_div in stats_divs:
+                        
+                #     player_data['stats'] = player_stats
+                    
+                for stat_div in stats_divs:
+                    stat_name = stat_div.find('div').get_text(strip=True)
+                    stat_value_div = stat_div.find('h3')
+                    if stat_value_div is None:
+                        stat_value = None
+                    else:
+                        stat_value = stat_value_div.get_text(strip=True)
+                    player_stats[stat_name] = stat_value
                 
-                player_stats_container = player_div.find('div', class_='league-player')
-                if player_stats_container is not None:
-                    for stat in player_stats_container.find_all("div", class_="uk-margin"):
-                        stat_name = stat.find('div', class_='el-meta').get_text(strip=True)
-                        stat_value = stat.find('h3', class_='el-title').get_text(strip=True) if stat.find('h3', class_='el-title') else None
-                        stat_key = stat_name.lower().replace('.', '').replace(' ', '_')
-                        player_data[stat_key] = int(stat_value) if stat_value else None
-                
-                # establezco estadisticas que no existen en ciertos roles en None
-                if position not in ["Presidente", "Entrenador"]:
-                    for stat_key in ['velocidad', 'fisico', 'tiro', 'pase', 'talento', 'defensa', 'reflejo', 'paradas', 'saque', 'estirada']:
-                        if stat_key not in player_data:
-                            player_data[stat_key] = None
-
-                if position == "Portero":
-                    for stat_key in ['reflejo', 'paradas', 'saque', 'estirada']:
-                        if stat_key not in player_data:
-                            player_data[stat_key] = None
-
-                else:
-                    player_data['reflejo'] = None
-                    player_data['paradas'] = None
-                    player_data['saque'] = None
-                    player_data['estirada'] = None
 
                 players_data.append(player_data)
-
+        # print(players_data[2])
         return players_data
     
     
@@ -203,13 +246,13 @@ class DatabaseManager:
         url = f"https://kingsleague.pro/clasificacion/"
         response = requests.get(url, headers=HEADERS)
         soup = BeautifulSoup(response.text, "html.parser")
-        rows = soup.find_all("tr.el-item")
+        tbody = soup.find("tbody")
         teams_data = []
         
-        for row in rows:
+        for tr in tbody.find_all('tr'):
             team_data = {}
             
-            columns = row.find_all("td.fs-table-column")
+            columns = tr.find_all('td')
             
             team_data["split_id"] = self.current_split
             team_data["name"] = columns[2].text.strip()
@@ -223,6 +266,7 @@ class DatabaseManager:
             team_data["goals_conceded"] = int(columns[9].text.strip())
             team_data["goals_difference"] = int(columns[10].text.strip())
             
+            # print(f"datos equipo: {team_data}")
             teams_data.append(team_data)
         
         return  teams_data
@@ -253,37 +297,45 @@ class DatabaseManager:
         response = requests.get(url, headers=HEADERS)
         soup = BeautifulSoup(response.text, "html.parser")
         
-        matchday_sections = soup.find_all("div", class_="fs-table uk-overflow-auto uk-margin-large-bottom calendar-match uk-hidden")
         
+        matchday_sections = soup.find_all("div", class_="fs-table uk-overflow-auto uk-margin-large-bottom calendar-match uk-hidden")
+
+    
         matches_data = []
         
         
         for index, matchday_section in enumerate(matchday_sections):
-            match_rows = matchday_section.find_all("tr", class_="el-item fs-table-row")
+            match_rows = matchday_section.find_all("tr")
             
             for match_row in match_rows:
-                time_str = match_row.find_all('div', class_='el-text_4')[0].text.strip()
-                time = datetime.datetime.strptime(time_str, '%H:%M').time()
+                time_str = match_row.find_all('td')[3].text.strip()
                 
-                home_team_name = match_row.find_all('div', class_='el-text_1')[0].text.strip()
-                away_team_name = match_row.find_all('div', class_='el-text_1')[2].text.strip()
-                
+                try:
+                    time = datetime.datetime.strptime(time_str, '%H:%M').time()
+                except ValueError:
+                    time = None
+
+                home_team_name = match_row.find_all('td')[0].text.strip()
+                away_team_name = match_row.find_all('td')[6].text.strip()
+
                 # consulto tabla Team para obtener los ID
                 home_team = Team.query.filter_by(name=home_team_name).first()
-                away_team = Team.query.filter_by(name=away_team_name).first()
                 
+                # print(f"HOME TEAM: {home_team}")
+                away_team = Team.query.filter_by(name=away_team_name).first()
+
                 matchday_id = index + 1
                 matchday = Matchday.query.get(matchday_id)
-                
+
                 if home_team and away_team and matchday:
                     match_data = {
-                        "matchday_id": matchday.id,
-                        "home_team_id": home_team.id,
-                        "away_team_id": away_team.id,
+                        "matchday_id": matchday_id,
+                        "home_team_name": home_team.name,
+                        "away_team_name": away_team.name,
                         "time": time,
                     }
                     matches_data.append(match_data)
-                    
+
         return matches_data
     
     
@@ -293,31 +345,14 @@ class DatabaseManager:
     
     
     def update_player_table(self):
+        # print(self.players_data)
         for player_data in self.players_data:
             player = Player(
-                team_id = player_data["team_id"],
+                team_name = player_data["team_name"],
                 split_id = self.current_split,
                 name = player_data["name"],
                 role = player_data["role"],
                 position = player_data["position"],
-                matches = player_data["partidos"],
-                goals_conceded = player_data["goles encajados"],
-                penalties_saved = player_data["penaltis parados"],
-                yellow_cards = player_data["t.amarilla"],
-                red_cards = player_data["t.roja"],
-                mvp = player_data["mvp"],
-                goals = player_data["goles"],
-                assists = player_data["asist."],
-                reflex = player_data["reflejo"],
-                saves = player_data["paradas"],
-                kickoff = player_data["saque"],
-                stretch = player_data["estirada"],
-                speed = player_data["velocidad"],
-                physicality = player_data["físico"],
-                shot = player_data["tiro"],
-                passing = player_data["pase"],
-                talent = player_data["talento"],
-                defense = player_data["defensa"],
             )
             db.session.add(player)
         
@@ -325,6 +360,7 @@ class DatabaseManager:
     
     
     def update_team_table(self):
+
         for team_data in self.teams_data:
             team = Team(
                 split_id = team_data["split_id"],
@@ -359,8 +395,8 @@ class DatabaseManager:
         for match_data in self.matches_data:
             match_ = Match(
                 matchday_id = match_data["matchday_id"],
-                home_team_id = match_data["home_team_id"],
-                away_team_id = match_data["away_team_id"],
+                home_team_name = match_data["home_team_name"],
+                away_team_name = match_data["away_team_name"],
                 time = match_data["time"]
             )
             db.session.add(match_)
@@ -376,3 +412,8 @@ class DatabaseManager:
             db.session.add(split)
         
         db.session.commit()
+        
+        
+        
+
+# TODO: Modificar los modelos, inspirarme en la API de https://kingsleague.jonanv.workers.dev/ y simplificar los datos que voy a mostrar. Una vez modificados los modelos, actualizar todas las funciones de scrapping para obtener unicamente los datos requeridos.
