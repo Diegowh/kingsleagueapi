@@ -5,10 +5,15 @@ import os
 from models import db
 
 import config
+import unicodedata
 
 from database_manager import DatabaseManager
+from endpoint_data import leaderboard, matchdays
 
 load_dotenv()
+
+def normalize(name):
+    return unicodedata.normalize('NFD', name).encode('ascii', 'ignore').decode("utf-8")
 
 def create_app():
     app = Flask(__name__)
@@ -29,15 +34,42 @@ def create_app():
 
 app = create_app()
 
-prueba = {
-    "cosa": 15,
-    "otra_cosa": "mas cositas",
-    "Viento": "Muchisimo"
-}
 
-@app.route('/api/leaderboard')
-def leaderboard():
-    return jsonify(prueba)
+@app.route('/leaderboard')
+def leaderboard_endpoint():
+    return jsonify(leaderboard())
+
+
+@app.route('/leaderboard/<team_name>')
+def team_endpoint(team_name):
+    normalized_team_name = normalize(team_name)
+    leaderboard_data = leaderboard()
+    team_data = next((team for team in leaderboard_data if normalize(team['team']['name']) == normalized_team_name), None)
+    if team_data is None:
+        return {"error": "Team not found"}, 404
+    else:
+        return jsonify(team_data)
+
+
+@app.route('/leaderboard/<team_name>/players-twelve')
+def players_twelve_endpoint(team_name):
+    # TODO faltan por scrapear los datos de los jugadores 12 y 13
+    pass
+
+
+@app.route('/matchdays')
+def matchdays_endpoint():
+    return jsonify(matchdays())
+
+
+@app.route('/matchdays/<int:match_id>')
+def matchday_endpoint(match_id):
+    matchdays_data = matchdays()
+    matchday_data = next((matchday for matchday in matchdays_data if matchday["id"] == match_id), None)
+    if matchday_data is None:
+        return {"error": "Matchday not found"}, 404
+    else:
+        return jsonify(matchday_data)
 
 
 if __name__ == '__main__':
