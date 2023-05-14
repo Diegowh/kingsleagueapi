@@ -6,9 +6,10 @@ from models import db
 
 import config
 import unicodedata
+import json
 
 from database_manager import DatabaseManager
-from endpoint_data import get_leaderboard, get_matchdays, get_bonus_players
+from endpoint_data import get_leaderboard, get_matchdays, get_team_bonus_players, api_documentation, get_bonus_players
 
 load_dotenv()
 
@@ -20,6 +21,8 @@ def create_app():
     app.config.from_object(config)
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Desactiva una funcion de Flask-SQLAlchemy que rastrea modificaciones en los objetos del modelo (Mejor rendimiento)
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+    app.config['JSON_SORT_KEYS'] = False
+    
 
     db.init_app(app)
     migrate = Migrate(app, db)
@@ -35,6 +38,16 @@ def create_app():
 app = create_app()
 
 
+@app.route('/')
+def documentation():
+    response = app.response_class(
+        response=json.dumps(api_documentation(), sort_keys=False),
+        status=200,
+        mimetype='application/json'
+    )
+    return response
+
+# leaderboard endpoints
 @app.route('/leaderboard', defaults={'team_name': None})
 @app.route('/leaderboard/<team_name>')
 def leaderboard_endpoint(team_name):
@@ -50,30 +63,38 @@ def leaderboard_endpoint(team_name):
             return jsonify(team_data)
 
 
-
 @app.route('/leaderboard/<team_name>/bonus-players')
-def bonus_players_endpoint(team_name):
+def team_bonus_players_endpoint(team_name):
     normalized_team_name = normalize(team_name)
-    bonus_players = get_bonus_players(normalized_team_name)
+    bonus_players = get_team_bonus_players(normalized_team_name)
     if not bonus_players:
         return {"error": "Team not found"}, 404
     else:
         return jsonify(bonus_players)
 
 
+# bonus players endpoint
+@app.route('/bonus-players')
+def bonus_players_endpoint():
+    return jsonify(get_bonus_players())
+
+
+# matchdays endpoints
 @app.route('/matchdays')
 def matchdays_endpoint():
     return jsonify(get_matchdays())
 
 
-@app.route('/matchdays/<int:match_id>')
-def matchday_endpoint(match_id):
+@app.route('/matchdays/<int:matchday_id>')
+def matchday_endpoint(matchday_id):
     matchdays_data = get_matchdays()
-    matchday_data = next((matchday for matchday in matchdays_data if matchday["id"] == match_id), None)
+    matchday_data = next((matchday for matchday in matchdays_data if matchday["id"] == matchday_id), None)
     if matchday_data is None:
         return {"error": "Matchday not found"}, 404
     else:
         return jsonify(matchday_data)
+
+
 
 
 if __name__ == '__main__':

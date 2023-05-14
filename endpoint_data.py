@@ -1,6 +1,38 @@
 from models import Team, Player, Matchday, Match, Split, BonusPlayer
 
 
+def api_documentation():
+    documentation = [
+        {
+            "endpoint": "/leaderboard",
+            "description": "Devuelve la tabla de clasificación de la Kings League",
+            "parameters":[
+                {
+                    "name": "team",
+                    "endpoint": "/leaderboard/:team_name",
+                    "description": "Devuelve la información de un equipo de la leaderboard de la Kings League por Team Name."
+                },
+                {
+                    "name": "bonus-players",
+                    "endpoint": "/leaderboard/:team_name/bonus-players",
+                    "description": "Devuelve la información de los jugadores 12 y 13 de un equipo de la leaderboard de la Kings League por Team Name."
+                },
+            ],
+        },
+        {
+            "endpoint": "/matchdays",
+            "description": "Devuelve la información de todas las jornadas del split actual de la Kings League.",
+            "parameters": [
+                {
+                    "name": "matchday",
+                    "endpoint": "/matchdays/:matchday_id",
+                    "description": "Devuelve la información de una jornada del split actual de la Kings league por Matchday Id.",
+                },
+            ],
+        },
+    ]
+    return documentation
+
 def get_leaderboard():
     teams = Team.query.order_by(Team.position).all()
     leaderboard = []
@@ -38,13 +70,47 @@ def get_leaderboard():
 
 
 
-def get_matchdays(): 
-    matchdays = [{"id": matchday.id, "date": matchday.date} for matchday in Matchday.query.all()]
+def get_matchdays():
+    matchdays = []
+    for matchday in Matchday.query.all():
+        matchday_dict = {"id": matchday.id, "date": matchday.date}
+        matches = Match.query.filter(Match.matchday_id == matchday.id).all()
+        
+        # cambio match.time a string porque sino me da error al pasaro a json
+        matchday_dict["matches"] = [{"home_team_name": match.home_team_name, "away_team_name": match.away_team_name, "time": match.time.strftime("%H:%M") if match.time else None} for match in matches]
+        
+        matchdays.append(matchday_dict)
     return matchdays
 
 
-def get_bonus_players(team_name):
+def get_team_bonus_players(team_name):
     bonus_players = BonusPlayer.query.filter_by(team_name=team_name).all()
     bonus_players_list = [{"name": player.name, "role": player.role, "position": player.position} for player in bonus_players]
     
     return bonus_players_list
+
+
+def get_bonus_players():
+    bonus_players = [{"name": player.name, "team_name": player.team_name, "role": player.role, "position": player.position} for player in BonusPlayer.query.all()]
+    
+    return bonus_players
+
+
+def get_mvps():
+    pass
+
+
+def get_presidents():
+    pass
+
+
+def get_coaches():
+    pass
+
+
+def get_top_scorers():
+    pass
+
+
+def get_top_assists():
+    pass
