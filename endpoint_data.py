@@ -1,4 +1,4 @@
-from models import Team, Player, Matchday, Match, Split
+from models import Team, Player, Matchday, Match, Split, BonusPlayer
 
 
 def leaderboard():
@@ -11,6 +11,9 @@ def leaderboard():
         players = Player.query.filter(Player.team_name == team.name, Player.role.notin_(["presidente", "entrenador"])).all()
         
         player_list = [{"name": player.name, "role": player.role, "position": player.position} for player in players]
+        
+        bonus_players = BonusPlayer.query.filter_by(team_name=team.name).all()
+        bonus_players_list = [{"name": player.name, "role": player.role, "position": player.position} for player in bonus_players]
         
         entry = {
             "rank": team.position,
@@ -25,7 +28,8 @@ def leaderboard():
                 "name": team.name,
                 "president": president.name,
                 "coach": coach.name,
-                "players": player_list
+                "players": player_list,
+                "bonus_players": bonus_players_list,
             }
         }
         leaderboard.append(entry)

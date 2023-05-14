@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup, Tag
-from models import Team, Player, Matchday, Match, Split
+from models import Team, Player, Matchday, Match, Split, BonusPlayer
 from models import db
 from sqlalchemy import text
 import datetime
@@ -30,7 +30,7 @@ class DatabaseManager:
         self.current_split, self.splits_data = self.split_data_scrap()
         self.players_data = self.player_data_scrap()
         self.teams_data = self.team_data_scrap()
-        self.bonus_player_data = self.bonus_player_scrap()
+        self.bonus_players_data = self.bonus_player_scrap()
     
     
     def update(self):
@@ -51,6 +51,7 @@ class DatabaseManager:
         Team.query.delete()
         Matchday.query.delete()
         Split.query.delete()
+        BonusPlayer.query.delete()
     
     
     def reset_id_sequences(self):
@@ -73,6 +74,11 @@ class DatabaseManager:
         # split_id
         max_split_id = db.session.execute(text("SELECT MAX(id) FROM split;")).scalar() or 0
         db.session.execute(text(f"ALTER SEQUENCE split_id_seq RESTART WITH {max_split_id + 1};"))
+        
+        # bonus_player_id
+        max_bonus_player_id = db.session.execute(text("SELECT MAX(id) FROM bonus_player;")).scalar() or 0
+        db.session.execute(text(f"ALTER SEQUENCE bonus_player_id_seq RESTART WITH {max_bonus_player_id + 1};"))
+
     
         db.session.commit()
     
@@ -83,6 +89,7 @@ class DatabaseManager:
         self.update_match_table()
         self.update_team_table()
         self.update_player_table()
+        self.update_bonusplayer_table()
     
     
     def reset_team_id_sequence(self):
@@ -156,9 +163,7 @@ class DatabaseManager:
 
 
             team_lenght = len(soup.find_all("h3", class_="el-title uk-heading-medium uk-font-secondary uk-text-secondary uk-margin-remove-top uk-margin-remove-bottom"))
-            
-            # print(f"Equipo: {index}")
-            
+
             for player_i in range(team_lenght):
                 # itero por cada jugador de cada equipo
                 player_data = {
@@ -185,9 +190,6 @@ class DatabaseManager:
                     player_data["name"] = soup.find_all("h1", class_="uk-heading-large uk-font-secondary uk-text-secondary uk-margin-large uk-margin-remove-top uk-text-center")[0]
 
             
-            # print(f"Player divs: {len(soup.find_all(filter_player_div))}")
-            # print(f'Stats container: {len(soup.find_all("div", class_="container-stats"))}')
-            
             all_player_divs = soup.find_all(filter_player_div)
             all_stats_container = soup.find_all("div", class_="container-stats")
             
@@ -210,12 +212,9 @@ class DatabaseManager:
                 # checkeo si role esta duplicado
                 if len(role) == 21:
                     role = role.split(" ")[0]
-                
-                # if stats_container.find("div", class_="uk-panel uk-text-large uk-text-secondary uk-text-bold uk-text-uppercase player-position uk-margin") == "Portero":
-                # print(stats_container.find("div", class_="uk-panel uk-text-large uk-text-secondary uk-text-bold uk-margin"))
+            
                 
                 stats_divs = stats_container.find_all('div', class_='el-item uk-panel uk-margin-remove-first-child')
-                # print(stats_divs[0])
                 player_stats = {}
                 player_data = {
                     'team_name': key,
@@ -239,7 +238,7 @@ class DatabaseManager:
                 
 
                 players_data.append(player_data)
-        # print(players_data[2])
+
         return players_data
     
     
@@ -267,7 +266,7 @@ class DatabaseManager:
             team_data["goals_conceded"] = int(columns[9].text.strip())
             team_data["goals_difference"] = int(columns[10].text.strip())
             
-            # print(f"datos equipo: {team_data}")
+
             teams_data.append(team_data)
         
         return  teams_data
@@ -322,7 +321,6 @@ class DatabaseManager:
                 # consulto tabla Team para obtener los ID
                 home_team = Team.query.filter_by(name=home_team_name).first()
                 
-                # print(f"HOME TEAM: {home_team}")
                 away_team = Team.query.filter_by(name=away_team_name).first()
 
                 matchday_id = index + 1
@@ -360,11 +358,10 @@ class DatabaseManager:
 
             players_info.append({
                 "team_name": team_name,
-                "player_name": player_name,
+                "name": player_name,
                 "position": f"jugador {position}",
                 "role": role,
             })
-        print(players_info)
         return players_info
     
     ###################################################
@@ -442,6 +439,14 @@ class DatabaseManager:
         db.session.commit()
         
         
-        
-
-# TODO: Modificar los modelos, inspirarme en la API de https://kingsleague.jonanv.workers.dev/ y simplificar los datos que voy a mostrar. Una vez modificados los modelos, actualizar todas las funciones de scrapping para obtener unicamente los datos requeridos.
+    def update_bonusplayer_table(self):
+        for bonusplayer_data in self.bonus_players_data:
+            bonus_player = BonusPlayer(
+                name = bonusplayer_data["name"],
+                team_name = bonusplayer_data["team_name"],
+                role = bonusplayer_data["role"],
+                position = bonusplayer_data["position"],
+            )
+            db.session.add(bonus_player)
+            
+        db.session.commit()
