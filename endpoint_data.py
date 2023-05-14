@@ -30,6 +30,14 @@ def api_documentation():
                 },
             ],
         },
+        {
+            "endpoint": "/presidents",
+            "description": "Devuelve los presidentes de la Kings League.",
+        },
+        {
+            "endpoint": "/coaches",
+            "description": "Devuelve los coaches de la Kings League.",
+        },
     ]
     return documentation
 
@@ -96,15 +104,24 @@ def get_bonus_players():
     return bonus_players
 
 
-def get_mvps():
-    pass
 
 
 def get_presidents():
-    pass
+    presidents = Player.query.filter_by(role="presidente").all()
+    presidents_list = [{"name": president.name, "team_name": president.team_name} for president in presidents]
+    
+    return presidents_list
+
 
 
 def get_coaches():
+    coaches = Player.query.filter_by(role="entrenador").all()
+    coaches_list = [{"name": coach.name, "team_name": coach.team_name} for coach in coaches]
+    
+    return coaches_list
+
+
+def get_mvps():
     pass
 
 

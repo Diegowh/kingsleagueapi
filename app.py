@@ -9,7 +9,7 @@ import unicodedata
 import json
 
 from database_manager import DatabaseManager
-from endpoint_data import get_leaderboard, get_matchdays, get_team_bonus_players, api_documentation, get_bonus_players
+from endpoint_data import get_leaderboard, get_matchdays, get_team_bonus_players, api_documentation, get_bonus_players, get_presidents, get_coaches
 
 load_dotenv()
 
@@ -93,6 +93,18 @@ def matchday_endpoint(matchday_id):
         return {"error": "Matchday not found"}, 404
     else:
         return jsonify(matchday_data)
+
+
+# presidents endpoint
+@app.route('/presidents')
+def presidents_endpoint():
+    return jsonify(get_presidents())
+
+
+# coaches endpoint
+@app.route('/coaches')
+def coaches_endpoint():
+    return jsonify(get_coaches())
 
 
 
