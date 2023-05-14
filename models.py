@@ -61,3 +61,30 @@ class BonusPlayer(db.Model):
     team_name = db.Column(db.String, nullable=False)
     role = db.Column(db.String, nullable=False)
     position = db.Column(db.String, nullable=True)
+    
+    
+class Mvp(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    ranking = db.Column(db.Integer, nullable=False)
+    name = db.Column(db.String, nullable=False)
+    team_name = db.Column(db.String, nullable=False)
+    mvps = db.Column(db.Integer, nullable=False)
+    games_played = db.Column(db.Integer, nullable=False)
+
+
+class TopScorer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    ranking = db.Column(db.Integer, nullable=False)
+    name = db.Column(db.String, nullable=False)
+    team_name = db.Column(db.String, nullable=False)
+    goals = db.Column(db.Integer, nullable=False)
+    games_played = db.Column(db.Integer, nullable=False)
+
+
+class TopAssists(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    ranking = db.Column(db.Integer, nullable=False)
+    name = db.Column(db.String, nullable=False)
+    team_name = db.Column(db.String, nullable=False)
+    assists = db.Column(db.Integer, nullable=False)
+    games_played = db.Column(db.Integer, nullable=False)

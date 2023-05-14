@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup, Tag
-from models import Team, Player, Matchday, Match, Split, BonusPlayer
+from models import Team, Player, Matchday, Match, Split, BonusPlayer, Mvp, TopScorer, TopAssists
 from models import db
 from sqlalchemy import text
 import datetime
@@ -31,6 +31,9 @@ class DatabaseManager:
         self.players_data = self.player_data_scrap()
         self.teams_data = self.team_data_scrap()
         self.bonus_players_data = self.bonus_player_scrap()
+        self.mvp_data = self.mvp_data_scrap()
+        self.top_scorers_data = self.top_scorer_data_scrap()
+        self.top_assists_data = self.top_assists_data_scrap()
     
     
     def update(self):
@@ -52,6 +55,9 @@ class DatabaseManager:
         Matchday.query.delete()
         Split.query.delete()
         BonusPlayer.query.delete()
+        Mvp.query.delete()
+        TopScorer.query.delete()
+        TopAssists.query.delete()
     
     
     def reset_id_sequences(self):
@@ -78,8 +84,19 @@ class DatabaseManager:
         # bonus_player_id
         max_bonus_player_id = db.session.execute(text("SELECT MAX(id) FROM bonus_player;")).scalar() or 0
         db.session.execute(text(f"ALTER SEQUENCE bonus_player_id_seq RESTART WITH {max_bonus_player_id + 1};"))
+        
+        # mvp_id
+        max_mvp_id = db.session.execute(text("SELECT MAX(id) FROM mvp;")).scalar() or 0
+        db.session.execute(text(f"ALTER SEQUENCE mvp_id_seq RESTART WITH {max_mvp_id + 1};"))
 
-    
+        # top_scorer_id
+        max_top_scorer_id = db.session.execute(text("SELECT MAX(id) FROM top_scorer;")).scalar() or 0
+        db.session.execute(text(f"ALTER SEQUENCE top_scorer_id_seq RESTART WITH {max_top_scorer_id + 1};"))
+        db.session.commit()
+        
+        # top_assists_id
+        max_top_assists_id = db.session.execute(text("SELECT MAX(id) FROM top_assists;")).scalar() or 0
+        db.session.execute(text(f"ALTER SEQUENCE top_assists_id_seq RESTART WITH {max_top_assists_id + 1};"))
         db.session.commit()
     
     
@@ -90,19 +107,9 @@ class DatabaseManager:
         self.update_team_table()
         self.update_player_table()
         self.update_bonusplayer_table()
-    
-    
-    def reset_team_id_sequence(self):
-        max_id = db.session.execute(text("SELECT MAX(id) FROM team;")).scalar() or 0
-        db.session.execute(text(f"ALTER SEQUENCE team_id_seq RESTART WITH {max_id + 1};"))
-        db.session.commit()
-    
-    
-    def reset_player_id_sequence(self):
-        max_id = db.session.execute(text("SELECT MAX(id) FROM player;")).scalar() or 0
-        db.session.execute(text(f"ALTER SEQUENCE player_id_seq RESTART WITH {max_id + 1};"))
-        db.session.commit()
-        
+        self.update_mvp_table()
+        self.update_top_scorers_table()
+        self.update_top_assists_table()
         
     ###################################################
     #                   SCRAP                    
@@ -222,10 +229,6 @@ class DatabaseManager:
                     'position': position,
                     'role': role,
                 }
-                # if role.lower() == "portero":
-                #     for stat_div in stats_divs:
-                        
-                #     player_data['stats'] = player_stats
                     
                 for stat_div in stats_divs:
                     stat_name = stat_div.find('div').get_text(strip=True)
@@ -240,6 +243,63 @@ class DatabaseManager:
                 players_data.append(player_data)
 
         return players_data
+    
+    
+    def mvp_data_scrap(self):
+        url = f"https://kingsleague.pro/estadisticas/mvp/"
+        response = requests.get(url, headers=HEADERS)
+        soup = BeautifulSoup(response.text, "html.parser")
+        mvps_list = []
+        table_rows = soup.find('tbody').find_all('tr')
+        for i, tr in enumerate(table_rows):
+            mvp_data = {
+                "ranking": i + 1,
+                "name": tr.find_all("td")[1].find("div").text.strip(),
+                "team_name": tr.find_all("td")[3].find("div").text.strip(),
+                "mvps": tr.find_all("td")[4].find("div").text.strip(),
+                "games_played": tr.find_all("td")[5].find("div").text.strip(),
+            }
+            mvps_list.append(mvp_data)
+        
+        return mvps_list
+    
+    
+    def top_scorer_data_scrap(self):
+        url = f"https://kingsleague.pro/estadisticas/goles/"
+        response = requests.get(url, headers=HEADERS)
+        soup = BeautifulSoup(response.text, "html.parser")
+        top_scorers_list = []
+        table_rows = soup.find('tbody').find_all('tr')
+        for i, tr in enumerate(table_rows):
+            top_scorer_data = {
+                "ranking": i + 1,
+                "name": tr.find_all("td")[1].find("div").text.strip(),
+                "team_name": tr.find_all("td")[3].find("div").text.strip(),
+                "goals": tr.find_all("td")[4].find("div").text.strip(),
+                "games_played": tr.find_all("td")[5].find("div").text.strip(),
+            }
+            top_scorers_list.append(top_scorer_data)
+        
+        return top_scorers_list
+    
+    
+    def top_assists_data_scrap(self):
+        url = f"https://kingsleague.pro/estadisticas/asistencias/"
+        response = requests.get(url, headers=HEADERS)
+        soup = BeautifulSoup(response.text, "html.parser")
+        table_rows = soup.find('tbody').find_all('tr')
+        top_assists_list = []
+        for i, tr in enumerate(table_rows):
+            top_assists_data = {
+                "ranking": i + 1,
+                "name": tr.find_all("td")[1].find("div").text.strip(),
+                "team_name": tr.find_all("td")[3].find("div").text.strip(),
+                "assists": tr.find_all("td")[4].find("div").text.strip(),
+                "games_played": tr.find_all("td")[5].find("div").text.strip(),
+            }
+            top_assists_list.append(top_assists_data)
+        
+        return top_assists_list
     
     
     def team_data_scrap(self) -> list:
@@ -449,4 +509,48 @@ class DatabaseManager:
             )
             db.session.add(bonus_player)
             
+        db.session.commit()
+        
+        
+    def update_mvp_table(self):
+        for mvp_data in self.mvp_data:
+            mvp = Mvp(
+                ranking = mvp_data["ranking"],
+                name = mvp_data["name"],
+                team_name = mvp_data["team_name"],
+                mvps = mvp_data["mvps"],
+                games_played = mvp_data["games_played"],
+            )
+            db.session.add(mvp)
+        
+        db.session.commit()
+        
+        
+    def update_top_scorers_table(self):
+        for top_scorer_data in self.top_scorers_data:
+            top_scorer = TopScorer(
+                ranking = top_scorer_data["ranking"],
+                name = top_scorer_data["name"],
+                team_name = top_scorer_data["team_name"],
+                goals = top_scorer_data["goals"],
+                games_played = top_scorer_data["games_played"],
+            )
+            db.session.add(top_scorer)
+        
+        db.session.commit()
+        
+        
+        self.top_assists_data = self.top_assists_data_scrap()
+        
+    def update_top_assists_table(self):
+        for top_assists_data in self.top_assists_data:
+            top_assists = TopAssists(
+                ranking = top_assists_data["ranking"],
+                name = top_assists_data["name"],
+                team_name = top_assists_data["team_name"],
+                assists = top_assists_data["assists"],
+                games_played = top_assists_data["games_played"],
+            )
+            db.session.add(top_assists)
+        
         db.session.commit()
