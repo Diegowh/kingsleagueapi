@@ -9,7 +9,7 @@ import unicodedata
 import json
 
 from database_manager import DatabaseManager
-from endpoint_data import get_leaderboard, get_matchdays, get_team_bonus_players, api_documentation, get_bonus_players, get_presidents, get_coaches
+from endpoint_data import get_leaderboard, get_matchdays, get_team_bonus_players, api_documentation, get_bonus_players, get_presidents, get_coaches, get_mvps, get_top_scorers, get_top_assists, get_rankings
 
 load_dotenv()
 
@@ -106,8 +106,18 @@ def presidents_endpoint():
 def coaches_endpoint():
     return jsonify(get_coaches())
 
-
-
+# rankings endpoint
+@app.route('/rankings', defaults={'ranking_name': None})
+@app.route('/rankings/<ranking_name>')
+def rankings_endpoint(ranking_name):
+    if ranking_name is None:
+        return jsonify(get_rankings())
+    elif ranking_name == "mvps":
+        return jsonify(get_mvps())
+    elif ranking_name == "top-scorers":
+        return jsonify(get_top_scorers())
+    elif ranking_name == "top-assists":
+        return jsonify(get_top_assists())
 
 if __name__ == '__main__':
     app.run(debug=config.DEBUG)
