@@ -1,7 +1,7 @@
 from models import Team, Player, Matchday, Match, Split, BonusPlayer
 
 
-def leaderboard():
+def get_leaderboard():
     teams = Team.query.order_by(Team.position).all()
     leaderboard = []
     for team in teams:
@@ -38,6 +38,13 @@ def leaderboard():
 
 
 
-def matchdays(): 
+def get_matchdays(): 
     matchdays = [{"id": matchday.id, "date": matchday.date} for matchday in Matchday.query.all()]
     return matchdays
+
+
+def get_bonus_players(team_name):
+    bonus_players = BonusPlayer.query.filter_by(team_name=team_name).all()
+    bonus_players_list = [{"name": player.name, "role": player.role, "position": player.position} for player in bonus_players]
+    
+    return bonus_players_list

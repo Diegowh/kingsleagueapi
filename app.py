@@ -8,7 +8,7 @@ import config
 import unicodedata
 
 from database_manager import DatabaseManager
-from endpoint_data import leaderboard, matchdays
+from endpoint_data import get_leaderboard, get_matchdays, get_bonus_players
 
 load_dotenv()
 
@@ -39,32 +39,36 @@ app = create_app()
 @app.route('/leaderboard/<team_name>')
 def leaderboard_endpoint(team_name):
     if team_name is None:
-        return jsonify(leaderboard())
+        return jsonify(get_leaderboard())
     else:
         normalized_team_name = normalize(team_name)
-    leaderboard_data = leaderboard()
-    team_data = next((team for team in leaderboard_data if normalize(team['team']['name']) == normalized_team_name), None)
-    if team_data is None:
+        leaderboard_data = get_leaderboard()
+        team_data = next((team for team in leaderboard_data if normalize(team['team']['name']) == normalized_team_name), None)
+        if team_data is None:
+            return {"error": "Team not found"}, 404
+        else:
+            return jsonify(team_data)
+
+
+
+@app.route('/leaderboard/<team_name>/bonus-players')
+def bonus_players_endpoint(team_name):
+    normalized_team_name = normalize(team_name)
+    bonus_players = get_bonus_players(normalized_team_name)
+    if not bonus_players:
         return {"error": "Team not found"}, 404
     else:
-        return jsonify(team_data)
-
-
-
-@app.route('/leaderboard/<team_name>/players-twelve')
-def players_twelve_endpoint(team_name):
-    # TODO faltan por scrapear los datos de los jugadores 12 y 13
-    pass
+        return jsonify(bonus_players)
 
 
 @app.route('/matchdays')
 def matchdays_endpoint():
-    return jsonify(matchdays())
+    return jsonify(get_matchdays())
 
 
 @app.route('/matchdays/<int:match_id>')
 def matchday_endpoint(match_id):
-    matchdays_data = matchdays()
+    matchdays_data = get_matchdays()
     matchday_data = next((matchday for matchday in matchdays_data if matchday["id"] == match_id), None)
     if matchday_data is None:
         return {"error": "Matchday not found"}, 404
