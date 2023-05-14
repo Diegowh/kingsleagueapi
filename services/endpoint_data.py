@@ -1,4 +1,4 @@
-from models import Team, Player, Matchday, Match, Split, BonusPlayer, Mvp, TopScorer, TopAssists
+from models.models import Team, Player, Matchday, Match, Split, BonusPlayer, Mvp, TopScorer, TopAssists
 
 
 def api_documentation():

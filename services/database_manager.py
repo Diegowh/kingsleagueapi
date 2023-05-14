@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup, Tag
-from models import Team, Player, Matchday, Match, Split, BonusPlayer, Mvp, TopScorer, TopAssists
-from models import db
+from models.models import Team, Player, Matchday, Match, Split, BonusPlayer, Mvp, TopScorer, TopAssists
+from models.models import db
 from sqlalchemy import text
 import datetime
 

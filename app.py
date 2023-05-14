@@ -2,19 +2,24 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, jsonify
 from flask_migrate import Migrate
 import os
-from models import db
+from models.models import db
 
 import config
-import unicodedata
-import json
 
-from database_manager import DatabaseManager
-from endpoint_data import get_leaderboard, get_matchdays, get_team_bonus_players, api_documentation, get_bonus_players, get_presidents, get_coaches, get_mvps, get_top_scorers, get_top_assists, get_rankings
+
+from services.database_manager import DatabaseManager
+
+from routes.bonus_players import bonus_players_bp
+from routes.coaches import coaches_bp
+from routes.documentation import documentation_bp
+from routes.leaderboard import leaderboard_bp
+from routes.matchdays import matchdays_bp
+from routes.presidents import presidents_bp
+from routes.coaches import coaches_bp
+from routes.rankings import rankings_bp
 
 load_dotenv()
 
-def normalize(name):
-    return unicodedata.normalize('NFD', name).encode('ascii', 'ignore').decode("utf-8")
 
 def create_app():
     app = Flask(__name__)
@@ -33,91 +38,18 @@ def create_app():
         database_manager = DatabaseManager()
         database_manager.update()
     
+    # registro los blueprints
+    app.register_blueprint(bonus_players_bp)
+    app.register_blueprint(coaches_bp)
+    app.register_blueprint(documentation_bp)
+    app.register_blueprint(leaderboard_bp)
+    app.register_blueprint(matchdays_bp)
+    app.register_blueprint(presidents_bp)
+    app.register_blueprint(rankings_bp)
+    
     return app
 
 app = create_app()
-
-
-@app.route('/')
-def documentation():
-    response = app.response_class(
-        response=json.dumps(api_documentation(), sort_keys=False),
-        status=200,
-        mimetype='application/json'
-    )
-    return response
-
-# leaderboard endpoints
-@app.route('/leaderboard', defaults={'team_name': None})
-@app.route('/leaderboard/<team_name>')
-def leaderboard_endpoint(team_name):
-    if team_name is None:
-        return jsonify(get_leaderboard())
-    else:
-        normalized_team_name = normalize(team_name)
-        leaderboard_data = get_leaderboard()
-        team_data = next((team for team in leaderboard_data if normalize(team['team']['name']) == normalized_team_name), None)
-        if team_data is None:
-            return {"error": "Team not found"}, 404
-        else:
-            return jsonify(team_data)
-
-
-@app.route('/leaderboard/<team_name>/bonus-players')
-def team_bonus_players_endpoint(team_name):
-    normalized_team_name = normalize(team_name)
-    bonus_players = get_team_bonus_players(normalized_team_name)
-    if not bonus_players:
-        return {"error": "Team not found"}, 404
-    else:
-        return jsonify(bonus_players)
-
-
-# bonus players endpoint
-@app.route('/bonus-players')
-def bonus_players_endpoint():
-    return jsonify(get_bonus_players())
-
-
-# matchdays endpoints
-@app.route('/matchdays')
-def matchdays_endpoint():
-    return jsonify(get_matchdays())
-
-
-@app.route('/matchdays/<int:matchday_id>')
-def matchday_endpoint(matchday_id):
-    matchdays_data = get_matchdays()
-    matchday_data = next((matchday for matchday in matchdays_data if matchday["id"] == matchday_id), None)
-    if matchday_data is None:
-        return {"error": "Matchday not found"}, 404
-    else:
-        return jsonify(matchday_data)
-
-
-# presidents endpoint
-@app.route('/presidents')
-def presidents_endpoint():
-    return jsonify(get_presidents())
-
-
-# coaches endpoint
-@app.route('/coaches')
-def coaches_endpoint():
-    return jsonify(get_coaches())
-
-# rankings endpoint
-@app.route('/rankings', defaults={'ranking_name': None})
-@app.route('/rankings/<ranking_name>')
-def rankings_endpoint(ranking_name):
-    if ranking_name is None:
-        return jsonify(get_rankings())
-    elif ranking_name == "mvps":
-        return jsonify(get_mvps())
-    elif ranking_name == "top-scorers":
-        return jsonify(get_top_scorers())
-    elif ranking_name == "top-assists":
-        return jsonify(get_top_assists())
 
 if __name__ == '__main__':
     app.run(debug=config.DEBUG)
