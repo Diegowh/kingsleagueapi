@@ -18,7 +18,7 @@ class Team(db.Model):
     goals_scored = db.Column(db.Integer, default=0)
     goals_conceded = db.Column(db.Integer, default=0)
     goals_difference = db.Column(db.Integer, default=0)
-    
+
 
 
 class Player(db.Model):
@@ -53,3 +53,11 @@ class Split(db.Model):
     
     teams = db.relationship('Team', backref='split', lazy=True)
     players = db.relationship('Player', backref='split', lazy=True)
+    
+
+class BonusPlayer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    team_name = db.Column(db.String, nullable=False)
+    role = db.Column(db.String, nullable=False)
+    position = db.Column(db.String, nullable=True)

@@ -30,6 +30,7 @@ class DatabaseManager:
         self.current_split, self.splits_data = self.split_data_scrap()
         self.players_data = self.player_data_scrap()
         self.teams_data = self.team_data_scrap()
+        self.bonus_player_data = self.bonus_player_scrap()
     
     
     def update(self):
@@ -338,6 +339,33 @@ class DatabaseManager:
 
         return matches_data
     
+    
+    def bonus_player_scrap(self):
+        url = "https://kingsleague.pro/jugador-12/"
+        response = requests.get(url, headers=HEADERS)
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        card_divs = [div for div in soup.find_all("div", class_="fs-grid-item-holder uk-flex uk-flex-column")]
+        
+        players_info = []
+        
+        for card_div in card_divs:
+            team_name = card_div.find("div", class_="fs-grid-text fs-grid-text-2 uk-text-lead uk-text-secondary uk-margin-remove-bottom uk-margin-remove-top").text.strip()
+            
+            player_name = card_div.find("h3", class_="fs-grid-meta fs-grid-meta-3 uk-heading-medium uk-heading-medium uk-text-secondary uk-link-reset uk-margin-remove-bottom uk-margin-remove-top").text.strip()
+            
+            position = card_div.find("div", class_="fs-grid-text fs-grid-text-4 uk-heading-small uk-text-primary uk-margin-remove-bottom uk-margin-remove-top").text.strip()
+            
+            role = card_div.find("div", class_="fs-grid-meta fs-grid-meta-1 uk-text-secondary").text.strip()
+
+            players_info.append({
+                "team_name": team_name,
+                "player_name": player_name,
+                "position": f"jugador {position}",
+                "role": role,
+            })
+        print(players_info)
+        return players_info
     
     ###################################################
     #                   UPDATE                        

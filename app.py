@@ -35,20 +35,20 @@ def create_app():
 app = create_app()
 
 
-@app.route('/leaderboard')
-def leaderboard_endpoint():
-    return jsonify(leaderboard())
-
-
+@app.route('/leaderboard', defaults={'team_name': None})
 @app.route('/leaderboard/<team_name>')
-def team_endpoint(team_name):
-    normalized_team_name = normalize(team_name)
+def leaderboard_endpoint(team_name):
+    if team_name is None:
+        return jsonify(leaderboard())
+    else:
+        normalized_team_name = normalize(team_name)
     leaderboard_data = leaderboard()
     team_data = next((team for team in leaderboard_data if normalize(team['team']['name']) == normalized_team_name), None)
     if team_data is None:
         return {"error": "Team not found"}, 404
     else:
         return jsonify(team_data)
+
 
 
 @app.route('/leaderboard/<team_name>/players-twelve')
