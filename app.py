@@ -6,7 +6,8 @@ from models.models import db
 
 import config
 
-
+from apscheduler.schedulers.blocking import BlockingScheduler
+from threading import Thread
 from services.db_manager import DatabaseManager
 
 from routes.bonus_players import bonus_players_bp
@@ -19,7 +20,11 @@ from routes.rankings import rankings_bp
 
 from services.scraper import Scraper
 
+UPDATE_HOURS = 168
+
+
 load_dotenv()
+
 
 
 def configure_app(app):
@@ -38,9 +43,7 @@ def create_app():
     with app.app_context():
         db.create_all()
         
-        scraper = Scraper()
-        database_manager = DatabaseManager(scraper=scraper)
-        database_manager.update()
+
     
     # registro los blueprints
     app.register_blueprint(bonus_players_bp)
@@ -54,9 +57,21 @@ def create_app():
     return app
 
 
-
-
 app = create_app()
+
+sched = BlockingScheduler()
+
+
+@sched.scheduled_job('interval', hours=UPDATE_HOURS)
+def weekly_update():
+    with app.app_context():
+        scraper = Scraper()
+        database_manager = DatabaseManager(scraper=scraper)
+        database_manager.update()
+        
+# inicio el programador en un hilo separado para evitar que interfiera con la ejecucion de app.py
+scheduler_thread = Thread(target=sched.start)
+scheduler_thread.start()
 
 
 if __name__ == '__main__':
