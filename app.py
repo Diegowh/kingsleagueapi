@@ -67,9 +67,12 @@ sched = BlockingScheduler()
 @sched.scheduled_job('interval', hours=UPDATE_HOURS)
 def weekly_update():
     with app.app_context():
-        scraper = Scraper()
-        database_manager = DatabaseManager(scraper=scraper)
-        database_manager.update()
+        try:
+            scraper = Scraper()
+            database_manager = DatabaseManager(scraper=scraper)
+            database_manager.update()
+        except Exception as e:
+            print(f"Error during weekly update: {e}")
         
 # inicio el programador en un hilo separado para evitar que interfiera con la ejecucion de app.py
 scheduler_thread = Thread(target=sched.start)
