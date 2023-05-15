@@ -29,11 +29,11 @@ load_dotenv()
 def configure_app(app):
     env = os.environ.get('FLASK_ENV', 'development')
     if env == 'production':
-        app.config.from_object(config.ProductionConfig)
+        app.config.from_object(config.ProductionConfig())
     elif env == 'testing':
-        app.config.from_object(config.TestingConfig)
+        app.config.from_object(config.TestingConfig())
     else:
-        app.config.from_object(config.DevelopmentConfig)
+        app.config.from_object(config.DevelopmentConfig())
 
 def create_app():
     app = Flask(__name__)
@@ -76,5 +76,10 @@ scheduler_thread = Thread(target=sched.start)
 scheduler_thread.start()
 
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return jsonify(error=str(e)), 404
+
+
 if __name__ == '__main__':
-    app.run(debug=config.DEBUG)
+    app.run(debug=app.config['DEBUG'])
