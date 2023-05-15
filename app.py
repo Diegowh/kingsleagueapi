@@ -26,12 +26,14 @@ UPDATE_HOURS = 168
 load_dotenv()
 
 
-
 def configure_app(app):
-    app.config.from_object(config)
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Desactiva una funcion de Flask-SQLAlchemy que rastrea modificaciones en los objetos del modelo (Mejor rendimiento)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
-    app.config['JSON_SORT_KEYS'] = False
+    env = os.environ.get('FLASK_ENV', 'development')
+    if env == 'production':
+        app.config.from_object(config.ProductionConfig)
+    elif env == 'testing':
+        app.config.from_object(config.TestingConfig)
+    else:
+        app.config.from_object(config.DevelopmentConfig)
 
 def create_app():
     app = Flask(__name__)
