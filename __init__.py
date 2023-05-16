@@ -45,6 +45,7 @@ def create_app():
     with app.app_context():
         db.create_all()
         
+        
 
     
     # registro los blueprints
@@ -55,6 +56,16 @@ def create_app():
     app.register_blueprint(matchdays_bp)
     app.register_blueprint(presidents_bp)
     app.register_blueprint(rankings_bp)
+    
+    
+    # Primera actualizacion a la base de datos fuera del programador semanal
+    with app.app_context():
+            try:
+                scraper = Scraper()
+                database_manager = DatabaseManager(scraper=scraper)
+                database_manager.update()
+            except Exception as e:
+                print(f"Error during first update: {e}")
     
     
     # Programador semanal
