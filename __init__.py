@@ -4,7 +4,7 @@ from flask_migrate import Migrate
 import os
 from models.models import db
 
-import kingsleagueapi.config as config
+import config as config
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from threading import Thread
