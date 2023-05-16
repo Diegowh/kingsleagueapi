@@ -4,9 +4,9 @@ from flask_migrate import Migrate
 import os
 from models.models import db
 
-import config
+import kingsleagueapi.config as config
 
-from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
 from threading import Thread
 from services.db_manager import DatabaseManager
 
@@ -56,33 +56,38 @@ def create_app():
     app.register_blueprint(presidents_bp)
     app.register_blueprint(rankings_bp)
     
+    
+    # Programador semanal
+    sched = BackgroundScheduler()
+    
+    @sched.scheduled_job('interval', hours=UPDATE_HOURS)
+    def weekly_update():
+        with app.app_context():
+            try:
+                scraper = Scraper()
+                database_manager = DatabaseManager(scraper=scraper)
+                database_manager.update()
+            except Exception as e:
+                print(f"Error during weekly update: {e}")
+            
+    # inicio el programador en un hilo separado para evitar que interfiera con la ejecucion de app.py
+    scheduler_thread = Thread(target=sched.start)
+    scheduler_thread.start()
+    
+    
+    # Manejador de errores
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return jsonify(error=str(e)), 404
+    
+    
     return app
 
 
-app = create_app()
-
-sched = BlockingScheduler()
 
 
-@sched.scheduled_job('interval', hours=UPDATE_HOURS)
-def weekly_update():
-    with app.app_context():
-        try:
-            scraper = Scraper()
-            database_manager = DatabaseManager(scraper=scraper)
-            database_manager.update()
-        except Exception as e:
-            print(f"Error during weekly update: {e}")
-        
-# inicio el programador en un hilo separado para evitar que interfiera con la ejecucion de app.py
-scheduler_thread = Thread(target=sched.start)
-scheduler_thread.start()
-
-
-@app.errorhandler(404)
-def page_not_found(e):
-    return jsonify(error=str(e)), 404
 
 
 if __name__ == '__main__':
-    app.run(debug=app.config['DEBUG'], host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+    app = create_app()
+    app.run(debug=app.config['DEBUG'])
