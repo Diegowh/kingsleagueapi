@@ -6,13 +6,6 @@
 > KingsLeague API provides data about Kings League leaderboard, teams, presidents, coaches, players, etc. by scrapping [kingsleague.pro](https://kingsleague.pro). 
 > Built with **Flask** and **BeautifulSoup** and utilizes **PostgreSQL** to storage all the scraped data. The API performs weekly updates to ensure the data is up do date, as the website itself is updates on a weekly basis.
 
-## Table of contents
-* 1
-* 2
-* 3
-* 4
-* 5
-
 ## ✨ API
 Live instance: https://kingsleague-api.onrender.com/
 
